@@ -56,6 +56,15 @@ label{display:block;font-weight:600;margin-top:12px}
 .fill{display:block;font:600 clamp(22px,5.5vw,28px)/1.2 'Bricolage Grotesque',Georgia,sans-serif;margin:26px 0 2px}
 input.line{border:0;border-bottom:2px solid var(--lag);border-radius:0;background:transparent;padding:8px 2px;font-size:20px;margin:0}
 input.line:focus-visible{outline:none;border-bottom-color:var(--sun);box-shadow:0 2px 0 var(--sun)}
+.wheel{width:100%;max-width:380px;display:block;margin:6px auto}
+.wheel g{cursor:pointer;transition:transform .25s,opacity .25s}
+.wheel g:focus{outline:none}
+.wheel g:focus-visible path{stroke:var(--ink);stroke-width:3}
+.wheel text{pointer-events:none;font:600 12px Figtree,system-ui,sans-serif;fill:#183130}
+.fchip{border:0;color:#183130;font-weight:600;padding:8px 16px;font-size:16px}
+.res{background:var(--bg);border-radius:18px;padding:16px 18px;margin-top:16px}
+.crumbs{color:var(--mute);font-size:15px;min-height:1.5em;text-align:center;margin:4px 0 8px}
+@media (prefers-reduced-motion:reduce){.wheel g{transition:none}}
 h3{font:700 20px 'Bricolage Grotesque',Georgia,sans-serif;margin:24px 0 4px}
 :root{--leaf:#3a7d57;--root:#8b5a2b}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--leaf:#6cc08a;--root:#d2a35c}}
@@ -145,13 +154,23 @@ svg.tree{width:100%;max-width:460px;display:block;margin:0 auto}
 </div>
 </section>
 
+<section class="st" id="s-feel">
+<h2>Feel</h2>
+<p>Under the urge to scroll there is usually a feeling. Naming it precisely helps the body settle. Tap the wheel, then follow your feeling inward.</p>
+<svg class="wheel" id="wheel" viewBox="0 0 360 360" role="group" aria-label="Feelings wheel"></svg>
+<p class="crumbs" id="crumbs"></p>
+<div class="row" id="fchips" style="justify-content:center"></div>
+<div id="fres"></div>
+</section>
+
 <section class="st" id="s-journal">
 <h2>Trigger journal</h2>
 <p>Write it down right after a scroll session, or right after you resisted one. Patterns show up on paper.</p>
 <label for="j1">What happened, and where were you?</label>
 <input type="text" id="j1" placeholder="e.g. Alone in the kitchen after a hard meeting">
-<label for="j2">What did you feel in your body?</label>
-<input type="text" id="j2" placeholder="e.g. Tight chest, restless hands">
+<label for="j2">What did you feel, emotionally and in your body?</label>
+<input type="text" id="j2" placeholder="e.g. Overwhelmed, tight chest, restless hands">
+<div class="row" style="margin:4px 0"><button class="ghost" id="jwheel" style="padding:7px 14px;font-size:14px">Not sure? Use the feelings wheel</button></div>
 <label for="j3">What were you really needing?</label>
 <input type="text" id="j3" placeholder="e.g. Rest, connection, a break">
 <label for="j4">What will you try next time?</label>
@@ -181,6 +200,7 @@ svg.tree{width:100%;max-width:460px;display:block;margin:0 auto}
 <p>Every completed station counts as a rep. Urge ratings show how much a craving drops when you ride it out.</p>
 <div class="stats"><div><b id="n-all">0</b><span>total reps</span></div><div><b id="n-day">0</b><span>today</span></div><div><b id="n-drop">-</b><span>avg urge drop</span></div></div>
 <div class="row"><button class="ghost" id="clr">Clear my data</button></div>
+<p class="note" id="topfeel"></p>
 <p class="note">This is a training aid, not treatment. If phone use feels tied to depression, anxiety or trauma, a licensed therapist can help. Progress is saved only in this browser.</p>
 <p class="note">The Reset Gym is a tool from Pattern Hunt Africa.</p>
 </section>
@@ -189,10 +209,10 @@ svg.tree{width:100%;max-width:460px;display:block;margin:0 auto}
 
 <script>
 const $=id=>document.getElementById(id);
-const tabs=[['breathe','Breathe'],['ground','Ground'],['release','Release'],['ride','Ride the urge'],['journal','Trigger journal'],['tree','Tree'],['log','Progress']];
+const tabs=[['feel','Feel'],['breathe','Breathe'],['ground','Ground'],['release','Release'],['ride','Ride the urge'],['journal','Trigger journal'],['tree','Tree'],['log','Progress']];
 let data={reps:[],urges:[]},circuit=false,stop=null;
 try{const d=JSON.parse(localStorage.getItem('resetgym')||'null');if(d&&d.reps)data=d}catch(e){}
-data.trig=data.trig||[];data.leaves=data.leaves||[];data.roots=data.roots||[];data.letgo=data.letgo||0;data.stmt=data.stmt||'';data.intro=data.intro||{};
+data.trig=data.trig||[];data.leaves=data.leaves||[];data.roots=data.roots||[];data.letgo=data.letgo||0;data.stmt=data.stmt||'';data.intro=data.intro||{};data.feels=data.feels||[];
 const save=()=>{try{localStorage.setItem('resetgym',JSON.stringify(data))}catch(e){}};
 const today=()=>new Date().toDateString();
 
@@ -275,12 +295,14 @@ $('csave').onclick=()=>{data.urges.push({b:+$('pre').value,a:+$('aft').value});r
 
 /* Log */
 function stats(){
+  const fc={};data.feels.forEach(x=>fc[x.w]=(fc[x.w]||0)+1);const top=Object.entries(fc).sort((a,b)=>b[1]-a[1])[0];
+  $('topfeel').textContent=top?'Feelings named: '+data.feels.length+'. Named most often: '+top[0].toLowerCase()+' ('+top[1]+').':'';
   $('n-all').textContent=data.reps.length;
   $('n-day').textContent=data.reps.filter(r=>r.d===today()).length;
   if(data.urges.length){const d=data.urges.reduce((s,u)=>s+(u.b-u.a),0)/data.urges.length;$('n-drop').textContent=(d>0?'-':'+')+Math.abs(d).toFixed(1)}
   else $('n-drop').textContent='-';
 }
-$('clr').onclick=()=>{data={reps:[],urges:[],trig:[],leaves:[],roots:[],letgo:0,stmt:'',intro:{}};save();stats();drawStmt();};
+$('clr').onclick=()=>{data={reps:[],urges:[],trig:[],leaves:[],roots:[],letgo:0,stmt:'',intro:{},feels:[]};save();stats();drawStmt();};
 
 /* Statement, journal, tree */
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -368,6 +390,55 @@ function fall(i){
 $('ladd').onclick=()=>{addLeaf($('lin').value);$('lin').value='';$('tmsg').textContent='';drawTree()};
 drawStmt();
 
+/* Feelings wheel */
+const FW={
+ Happy:{c:'#f0df5e',m:{Playful:['Aroused','Cheeky'],Content:['Free','Joyful'],Interested:['Curious','Inquisitive'],Proud:['Successful','Confident'],Accepted:['Respected','Valued'],Powerful:['Courageous','Creative'],Peaceful:['Loving','Thankful'],Trusting:['Sensitive','Intimate'],Optimistic:['Hopeful','Inspired']},t:['journal','Savor it. Write down what helped, so you can find your way back to it.']},
+ Surprised:{c:'#b9a0d4',m:{Excited:['Energetic','Eager'],Amazed:['Awe','Astonished'],Confused:['Perplexed','Disillusioned'],Startled:['Dismayed','Shocked']},t:['ground','Come back to the room. Find five things you can see.']},
+ Bad:{c:'#66c29c',m:{Tired:['Unfocussed','Sleepy'],Stressed:['Out of control','Overwhelmed'],Busy:['Rushed','Pressured'],Bored:['Apathetic','Indifferent']},t:['breathe','Slow your exhale. It tells your body the pressure can ease.']},
+ Fearful:{c:'#f2c46f',m:{Scared:['Helpless','Frightened'],Anxious:['Overwhelmed','Worried'],Insecure:['Inadequate','Inferior'],Weak:['Worthless','Insignificant'],Rejected:['Excluded','Persecuted'],Threatened:['Nervous','Exposed']},t:['breathe','A long, slow exhale tells your body you are safe right now.']},
+ Angry:{c:'#ef8383',m:{'Let down':['Betrayed','Resentful'],Humiliated:['Disrespected','Ridiculed'],Bitter:['Indignant','Violated'],Mad:['Furious','Jealous'],Aggressive:['Provoked','Hostile'],Frustrated:['Infuriated','Annoyed'],Distant:['Withdrawn','Numb'],Critical:['Sceptical','Dismissive']},t:['release','Heat needs somewhere to go. Let your body move it out.']},
+ Disgusted:{c:'#a3a3aa',m:{Disapproving:['Judgmental','Embarrassed'],Disappointed:['Appalled','Revolted'],Awful:['Nauseated','Detestable'],Repelled:['Horrified','Hesitant']},t:['ground','Step back into the present. Feel your feet and the air around you.']},
+ Sad:{c:'#86aedb',m:{Lonely:['Isolated','Abandoned'],Vulnerable:['Victimised','Fragile'],Despair:['Grief','Powerless'],Guilty:['Ashamed','Remorseful'],Depressed:['Empty','Inferior'],Hurt:['Disappointed','Embarrassed']},t:['journal','Be gentle with yourself. Write what you need most right now.']}
+};
+const FO={Bored:['ride','Boredom is often an urge in disguise. Ride it out for 90 seconds.'],Tired:['release','Your body is asking for rest. Loosen your shoulders and jaw first.'],Lonely:['journal','Write down who you could reach out to. A real conversation feeds you more than a feed.']};
+const CORES=Object.keys(FW);let fs={};
+function arc(r0,r1,a0,a1){const p=(r,a)=>(180+r*Math.cos(a)).toFixed(1)+' '+(180+r*Math.sin(a)).toFixed(1);return 'M'+p(r1,a0)+'A'+r1+' '+r1+' 0 0 1 '+p(r1,a1)+'L'+p(r0,a1)+'A'+r0+' '+r0+' 0 0 0 '+p(r0,a0)+'Z'}
+function drawWheel(){
+  const st=2*Math.PI/CORES.length;let h='';
+  CORES.forEach((c,i)=>{
+    const a0=-Math.PI/2+i*st,a1=a0+st,am=(a0+a1)/2,sel=fs.core===c,dim=fs.core&&!sel;
+    h+='<g tabindex="0" role="button" aria-label="'+c+'" data-c="'+c+'" style="transform:translate('+(sel?Math.cos(am)*8:0).toFixed(1)+'px,'+(sel?Math.sin(am)*8:0).toFixed(1)+'px);opacity:'+(dim?.35:1)+'"><path d="'+arc(46,150,a0,a1)+'" fill="'+FW[c].c+'" stroke="var(--panel)" stroke-width="3"/><text x="'+(180+Math.cos(am)*100).toFixed(1)+'" y="'+(184+Math.sin(am)*100).toFixed(1)+'" text-anchor="middle">'+c+'</text></g>';
+  });
+  h+='<circle cx="180" cy="180" r="40" fill="var(--panel)"/><text x="180" y="177" text-anchor="middle" style="fill:var(--mute)">How do</text><text x="180" y="193" text-anchor="middle" style="fill:var(--mute)">I feel?</text>';
+  $('wheel').innerHTML=h;
+  $('wheel').querySelectorAll('g').forEach(g=>{const go=()=>{fs={core:g.dataset.c};drawWheel();drawFeel()};g.onclick=go;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
+}
+function drawFeel(){
+  const box=$('fchips'),res=$('fres'),cr=$('crumbs');box.innerHTML='';res.innerHTML='';
+  if(!fs.core){cr.textContent='Tap the feeling closest to what you notice.';return}
+  const col=FW[fs.core].c,mk=(t,cls,fn,p)=>{const b=document.createElement('button');b.className=cls;b.textContent=t;if(cls==='fchip')b.style.background=col;b.onclick=fn;p.appendChild(b)};
+  if(fs.word){
+    const T=FO[fs.mid]||FW[fs.core].t,lab=(tabs.find(x=>x[0]===T[0])||[0,T[0]])[1];
+    cr.textContent=fs.core+(fs.mid?' \u203a '+fs.mid:'')+(fs.word!==fs.mid?' \u203a '+fs.word:'');
+    res.innerHTML='<div class="res"><div class="stmt" style="padding:0 0 6px">You are feeling '+esc(fs.word.toLowerCase())+'.</div><p>'+esc(T[1])+'</p><div class="row"></div></div>';
+    const row=res.querySelector('.row');
+    mk('Try: '+lab,'',()=>show(T[0]),row);
+    mk('Add to my journal','ghost',()=>{show('journal');const e=$('j2');e.value=(e.value?e.value+', ':'')+fs.word.toLowerCase();e.focus()},row);
+    mk('Make it a leaf','ghost',()=>{addLeaf(fs.word);show('tree')},row);
+    mk('Name another feeling','ghost',()=>{fs={};drawWheel();drawFeel()},row);
+  }else if(fs.mid){
+    cr.textContent=fs.core+' \u203a '+fs.mid+'. Which word fits best?';
+    FW[fs.core].m[fs.mid].forEach(w=>mk(w,'fchip',()=>done(w),box));
+    mk('Stay with \u201c'+fs.mid+'\u201d','ghost',()=>done(fs.mid),box);
+  }else{
+    cr.textContent=fs.core+'. Go a little deeper. Which is closer?';
+    Object.keys(FW[fs.core].m).forEach(m=>mk(m,'fchip',()=>{fs.mid=m;drawFeel()},box));
+  }
+}
+function done(w){fs.word=w;data.feels.push({d:today(),w,c:fs.core});rep('Feel');drawFeel()}
+$('jwheel').onclick=()=>show('feel');
+drawWheel();drawFeel();
+
 /* Landing */
 let draft=[];
 function drawDraft(){
@@ -390,7 +461,7 @@ $('begin').onclick=()=>{
   $('landing').hidden=true;$('app').hidden=false;drawIntent();window.scrollTo(0,0);
 };
 $('edit').onclick=showLanding;
-show('breathe');
+show('feel');
 if(data.roots.length&&data.intro.day===today()){$('app').hidden=false;drawIntent()}else showLanding();
 </script>
 </body>
